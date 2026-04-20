@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Credit Score Prediction System</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --secondary: #7c3aed;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg-dark: #0f0c29;
+      --bg-mid: #1a1650;
+      --bg-card: rgba(255,255,255,0.07);
+      --border-glass: rgba(255,255,255,0.15);
+      --text-main: #f0f4ff;
+      --text-muted: #a5b4fc;
+      --sidebar-w: 260px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* ───── Animated BG blobs ───── */
+    .bg-blobs {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .bg-blobs span {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.25; animation: blobMove 12s ease-in-out infinite alternate;
+    }
+    .bg-blobs span:nth-child(1) { width:520px;height:520px;background:#4f46e5;top:-120px;left:-100px;animation-duration:14s; }
+    .bg-blobs span:nth-child(2) { width:400px;height:400px;background:#7c3aed;bottom:-80px;right:-80px;animation-duration:11s; }
+    .bg-blobs span:nth-child(3) { width:300px;height:300px;background:#06b6d4;top:40%;left:40%;animation-duration:16s; }
+    @keyframes blobMove { 0%{transform:translate(0,0) scale(1);}100%{transform:translate(40px,30px) scale(1.12);} }
+
+    /* ───── Sidebar ───── */
+    #sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; width: var(--sidebar-w);
+      background: rgba(15,12,41,0.75);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border-glass);
+      z-index: 1040; display: flex; flex-direction: column;
+      transition: transform .35s cubic-bezier(.4,0,.2,1);
+    }
+    #sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+    .sidebar-brand {
+      padding: 1.6rem 1.5rem 1.2rem;
+      border-bottom: 1px solid var(--border-glass);
+      display: flex; align-items: center; gap: .75rem;
+    }
+    .brand-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; color: #fff; box-shadow: 0 4px 15px rgba(79,70,229,.5);
+    }
+    .brand-text { font-size: 1rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .brand-text small { display: block; font-size: .7rem; font-weight: 400; color: var(--text-muted); }
+
+    .sidebar-nav { flex: 1; padding: 1.2rem .75rem; overflow-y: auto; }
+    .nav-label {
+      font-size: .65rem; font-weight: 700; letter-spacing: .1em;
+      color: var(--text-muted); text-transform: uppercase; padding: .6rem .75rem .3rem;
+    }
+    .sidebar-nav .nav-link {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .72rem 1rem; border-radius: 10px; color: var(--text-muted);
+      font-size: .88rem; font-weight: 500; transition: all .2s; margin-bottom: 2px;
+      cursor: pointer; border: 1px solid transparent; text-decoration: none;
+    }
+    .sidebar-nav .nav-link i { width: 20px; text-align: center; font-size: .95rem; }
+    .sidebar-nav .nav-link:hover {
+      background: rgba(79,70,229,.2); color: #fff; border-color: rgba(79,70,229,.35);
+    }
+    .sidebar-nav .nav-link.active {
+      background: linear-gradient(135deg, rgba(79,70,229,.45), rgba(124,58,237,.35));
+      color: #fff; border-color: rgba(79,70,229,.5);
+      box-shadow: 0 2px 12px rgba(79,70,229,.25);
+    }
+    .sidebar-nav .nav-link .badge-pill {
+      margin-left: auto; font-size: .65rem; padding: .2rem .5rem;
+      border-radius: 999px; background: rgba(79,70,229,.5); color: #fff;
+    }
+
+    .sidebar-footer {
+      padding: 1rem .75rem; border-top: 1px solid var(--border-glass);
+      font-size: .78rem; color: var(--text-muted); text-align: center;
+    }
+
+    /* ───── Top Navbar ───── */
+    #topbar {
+      position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: 64px;
+      background: rgba(15,12,41,0.6);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-glass);
+      z-index: 1030; display: flex; align-items: center;
+      padding: 0 1.5rem; gap: 1rem; transition: left .35s cubic-bezier(.4,0,.2,1);
+    }
+    #topbar.expanded { left: 0; }
+
+    .topbar-toggle {
+      background: none; border: none; color: var(--text-muted); font-size: 1.2rem;
+      cursor: pointer; padding: .4rem; border-radius: 8px; transition: all .2s;
+    }
+    .topbar-toggle:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+    .topbar-title { font-size: 1.05rem; font-weight: 700; color: #fff; flex: 1; }
+    .topbar-title span { color: var(--accent); }
+
+    .topbar-badge {
+      display: flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.07); border: 1px solid var(--border-glass);
+      border-radius: 999px; padding: .35rem .85rem; font-size: .78rem; color: var(--text-muted);
+    }
+    .topbar-badge .dot { width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:.4;} }
+
+    /* ───── Main Content ───── */
+    #main {
+      margin-left: var(--sidebar-w); padding-top: 64px;
+      min-height: 100vh; position: relative; z-index: 1;
+      transition: margin-left .35s cubic-bezier(.4,0,.2,1);
+    }
+    #main.expanded { margin-left: 0; }
+
+    .content-section { display: none; padding: 2rem 1.75rem; }
+    .content-section.active { display: block; }
+
+    /* ───── Glass Card ───── */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: 18px; padding: 1.75rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.3);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .glass-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+
+    .card-header-glass {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: 1.5rem; padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-glass);
+    }
+    .card-header-glass .icon-wrap {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; color: #fff;
+    }
+    .card-header-glass h5 { font-size: 1rem; font-weight: 700; color: #fff; margin: 0; }
+    .card-header-glass p { font-size: .78rem; color: var(--text-muted); margin: 0; }
+
+    /* ───── Stat Cards ───── */
+    .stat-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px; padding: 1.4rem 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+    .stat-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; margin-bottom: .9rem;
+    }
+    .stat-icon.blue { background: linear-gradient(135deg,#4f46e5,#7c3aed); }
+    .stat-icon.cyan { background: linear-gradient(135deg,#06b6d4,#0891b2); }
+    .stat-icon.green { background: linear-gradient(135deg,#10b981,#059669); }
+    .stat-icon.orange { background: linear-gradient(135deg,#f59e0b,#d97706); }
+    .stat-val { font-size: 1.9rem; font-weight: 800; color: #fff; line-height: 1; }
+    .stat-label { font-size: .78rem; color: var(--text-muted); margin-top: .3rem; }
+    .stat-trend { font-size: .75rem; margin-top: .5rem; }
+    .stat-trend.up { color: var(--success); }
+    .stat-trend.down { color: var(--danger); }
+
+    /* ───── Form Inputs ───── */
+    .form-label {
+      font-size: .8rem; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem;
+    }
+    .input-group-glass { position: relative; }
+    .input-glass {
+      width: 100%; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+      color: #fff; padding: .65rem 1rem .65rem 2.6rem; font-size: .88rem;
+      transition: all .2s; outline: none;
+    }
+    .input-glass::placeholder { color: rgba(255,255,255,.3); }
+    .input-glass:focus {
+      border-color: var(--primary); background: rgba(79,70,229,.15);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.25);
+    }
+    .input-glass option { background: #1e1b4b; color: #fff; }
+    .input-icon {
+      position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: .85rem; pointer-events: none;
+    }
+    .input-glass.is-invalid { border-color: var(--danger); }
+    .invalid-feedback-glass { font-size: .75rem; color: var(--danger); margin-top: .3rem; display: none; }
+    .input-glass.is-invalid ~ .invalid-feedback-glass { display: block; }
+
+    /* ───── Buttons ───── */
+    .btn-gradient {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none; color: #fff; border-radius: 10px;
+      padding: .7rem 1.8rem; font-size: .9rem; font-weight: 600;
+      cursor: pointer; transition: all .25s; letter-spacing: .02em;
+      box-shadow: 0 4px 15px rgba(79,70,229,.45);
+    }
+    .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(79,70,229,.6); filter: brightness(1.1); }
+    .btn-gradient:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+      color: var(--text-muted); border-radius: 10px;
+      padding: .7rem 1.5rem; font-size: .9rem; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+    /* ───── Result Card ───── */
+    .result-card {
+      border-radius: 20px;
+      padding: 1.8rem 1.6rem 1.2rem;
+      text-align: center;
+      animation: resultIn .5s cubic-bezier(.4,0,.2,1);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.14);
+      overflow: hidden;
+    }
+    @keyframes resultIn { from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:none;} }
+    .result-card.risk-low {
+      background: radial-gradient(circle at 30% 0%, rgba(34,197,94,.18), rgba(3,105,161,.18) 45%, rgba(55,48,163,.14));
+    }
+    .result-card.risk-medium {
+      background: radial-gradient(circle at 30% 0%, rgba(251,191,36,.2), rgba(3,105,161,.16) 45%, rgba(71,85,105,.18));
+    }
+    .result-card.risk-high {
+      background: radial-gradient(circle at 30% 0%, rgba(248,113,113,.24), rgba(30,64,175,.14) 45%, rgba(88,28,135,.16));
+    }
+
+    .risk-ring-wrap {
+      position: relative;
+      width: 132px;
+      height: 132px;
+      margin: 0 auto .8rem;
+    }
+    .risk-ring-wrap svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .risk-ring-bg {
+      fill: none;
+      stroke: rgba(255,255,255,.12);
+      stroke-width: 10;
+    }
+    .risk-ring-fg {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset .9s ease;
+    }
+    .risk-ring-fg.low { stroke: #12d6a2; }
+    .risk-ring-fg.medium { stroke: #fbbf24; }
+    .risk-ring-fg.high { stroke: #f87171; }
+    .risk-ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .risk-ring-value {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .risk-ring-unit {
+      margin-top: .25rem;
+      font-size: .76rem;
+      color: rgba(255,255,255,.75);
+      font-weight: 600;
+    }
+
+    .risk-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto .75rem;
+      font-size: 1.45rem;
+    }
+    .risk-icon.low { background: rgba(16,185,129,.2); color: #12d6a2; }
+    .risk-icon.medium { background: rgba(251,191,36,.22); color: #fbbf24; }
+    .risk-icon.high { background: rgba(248,113,113,.22); color: #f87171; }
+
+    .risk-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin-bottom: .55rem;
+    }
+    .risk-title.low { color: #12d6a2; }
+    .risk-title.medium { color: #fbbf24; }
+    .risk-title.high { color: #f87171; }
+
+    .risk-message {
+      font-size: .86rem;
+      color: rgba(255,255,255,.74);
+      max-width: 640px;
+      margin: 0 auto 1.2rem;
+      line-height: 1.55;
+    }
+
+    .result-divider {
+      border-top: 1px solid rgba(255,255,255,.12);
+      margin: 0 -1.6rem .95rem;
+    }
+
+    .result-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+      text-align: center;
+    }
+    .result-metric-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+      line-height: 1.1;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .result-metric-value.low { color: #12d6a2; }
+    .result-metric-value.medium { color: #fbbf24; }
+    .result-metric-value.high { color: #f87171; }
+    .result-metric-label {
+      margin-top: .25rem;
+      font-size: .82rem;
+      color: rgba(255,255,255,.5);
+    }
+
+    .model-results-title {
+      margin-top: .95rem;
+      margin-bottom: .55rem;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.6);
+      text-align: left;
+    }
+
+    .model-results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .7rem;
+      text-align: left;
+    }
+
+    .model-result-item {
+      background: rgba(15,23,42,.3);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: .65rem;
+    }
+
+    .model-result-head {
+      font-size: .78rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.84);
+      margin-bottom: .45rem;
+    }
+
+    .model-result-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .35rem;
+    }
+
+    .model-result-grid > div {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: .7rem;
+      padding-top: .35rem;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .model-result-grid > div:first-child {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .model-result-label {
+      font-size: .65rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: rgba(255,255,255,.48);
+      margin-bottom: 0;
+    }
+
+    .model-result-value {
+      font-size: .85rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .model-result-value.low { color: #12d6a2; }
+    .model-result-value.medium { color: #fbbf24; }
+    .model-result-value.high { color: #f87171; }
+
+    @media (max-width: 575.98px) {
+      .result-metrics { grid-template-columns: 1fr; }
+      .risk-title { font-size: 1.35rem; }
+      .result-metric-value { font-size: 1.25rem; }
+      .model-results-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ───── Chart containers ───── */
+    .chart-container { position: relative; }
+
+    /* ───── Section Title ───── */
+    .section-title {
+      font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: .3rem;
+    }
+    .section-sub { font-size: .85rem; color: var(--text-muted); margin-bottom: 1.8rem; }
+
+    /* ───── Breadcrumb ───── */
+    .breadcrumb-glass { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+    .breadcrumb-glass span { color: #fff; }
+
+    /* ───── Alert ───── */
+    .alert-glass {
+      background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35);
+      border-radius: 12px; padding: 1rem 1.2rem; font-size: .85rem;
+      color: #fca5a5; display: flex; gap: .75rem; align-items: flex-start;
+    }
+    .alert-glass.success {
+      background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.35); color: #6ee7b7;
+    }
+
+    /* ───── Spinner ───── */
+    .spinner-ring {
+      display: inline-block; width: 22px; height: 22px;
+      border: 3px solid rgba(255,255,255,.25); border-top-color: #fff;
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ───── About ───── */
+    .about-feature {
+      display: flex; gap: 1rem; align-items: flex-start; padding: 1rem;
+      background: rgba(255,255,255,.04); border-radius: 12px; border: 1px solid var(--border-glass);
+      margin-bottom: .75rem; transition: all .2s;
+    }
+    .about-feature:hover { background: rgba(255,255,255,.08); }
+    .about-feature-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* ───── Table ───── */
+    .table-glass { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+    .table-glass th { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; padding: .5rem 1rem; }
+    .table-glass td { padding: .7rem 1rem; font-size: .83rem; color: var(--text-main); background: rgba(255,255,255,.04); }
+    .table-glass tr td:first-child { border-radius: 8px 0 0 8px; }
+    .table-glass tr td:last-child { border-radius: 0 8px 8px 0; }
+    .badge-risk { font-size: .7rem; padding: .25rem .6rem; border-radius: 999px; font-weight: 600; }
+    .badge-risk.low { background: rgba(16,185,129,.2); color: #6ee7b7; }
+    .badge-risk.high { background: rgba(239,68,68,.2); color: #fca5a5; }
+    .badge-risk.med { background: rgba(245,158,11,.2); color: #fcd34d; }
+
+    /* ───── Model metrics table ───── */
+    .metrics-table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+    .metrics-table th {
+      font-size: .72rem;
+      color: #9fb2ff;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: .65rem 1rem;
+      font-weight: 700;
+    }
+    .metrics-table td {
+      padding: .85rem 1rem;
+      font-size: .9rem;
+      color: var(--text-main);
+      background: linear-gradient(135deg, rgba(88,78,156,0.32), rgba(66,113,156,0.18));
+      font-weight: 600;
+    }
+    .metrics-table tbody tr td:first-child { border-radius: 10px 0 0 10px; }
+    .metrics-table tbody tr td:last-child { border-radius: 0 10px 10px 0; }
+    .metrics-table tbody tr:nth-child(odd) td {
+      background: linear-gradient(135deg, rgba(88,78,156,0.32), rgba(66,113,156,0.18));
+    }
+    .metrics-table tbody tr:nth-child(even) td {
+      background: linear-gradient(135deg, rgba(95,87,168,0.4), rgba(74,135,175,0.22));
+    }
+    .metric-model {
+      color: #00d4ff;
+      font-weight: 800;
+      font-size: 1.02rem;
+    }
+    .metric-param {
+      display: inline-block;
+      padding: .28rem .75rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .metric-param.default {
+      background: rgba(245,158,11,.24);
+      color: #ffd166;
+    }
+    .metric-param.tuned {
+      background: rgba(16,185,129,.24);
+      color: #7ef9d0;
+    }
+
+    /* ───── Mobile overlay ───── */
+    #overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1035; }
+    #overlay.show { display:block; }
+
+    /* ───── Responsive ───── */
+    @media (max-width: 991.98px) {
+      #sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+      #sidebar.mobile-open { transform: translateX(0); }
+      #topbar { left: 0 !important; }
+      #main { margin-left: 0 !important; }
+    }
+    @media (max-width: 575.98px) {
+      .content-section { padding: 1rem; }
+      .stat-val { font-size: 1.5rem; }
+    }
+
+    /* ───── Scrollbar ───── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 999px; }
+
+    /* ───── Tooltip-like field hint ───── */
+    .field-hint { font-size: .7rem; color: rgba(255,255,255,.3); margin-top: .2rem; }
+
+    /* ───── Divider ───── */
+    .divider { border: none; border-top: 1px solid var(--border-glass); margin: 1.5rem 0; }
+
+    /* ───── Feature bar ───── */
+    .feat-bar-wrap { margin-bottom: .6rem; }
+    .feat-bar-label { display: flex; justify-content: space-between; font-size: .78rem; color: var(--text-muted); margin-bottom: .3rem; }
+    .feat-bar-track { background: rgba(255,255,255,.08); border-radius: 999px; height: 6px; overflow: hidden; }
+    .feat-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+  </style>
+</head>
+
+<body>
+  <!-- Animated background blobs -->
+  <div class="bg-blobs" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Mobile overlay -->
+  <div id="overlay" onclick="toggleSidebar()"></div>
+
+  <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+  <nav id="sidebar" aria-label="Sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="brand-text">CreditAI <small>Prediction System v2.0</small></div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-label">Main Menu</div>
+      <a class="nav-link active" onclick="showSection('dashboard')" role="button" tabindex="0">
+        <i class="fas fa-gauge-high"></i> Dashboard
+        <span class="badge-pill">Live</span>
+      </a>
+      <a class="nav-link" onclick="showSection('prediction')" role="button" tabindex="0">
+        <i class="fas fa-brain"></i> Prediction Form
+      </a>
+      <a class="nav-link" onclick="showSection('analytics')" role="button" tabindex="0">
+        <i class="fas fa-chart-bar"></i> Analytics
+      </a>
+
+      <div class="nav-label" style="margin-top:.75rem;">Info</div>
+      <a class="nav-link" onclick="showSection('about')" role="button" tabindex="0">
+        <i class="fas fa-circle-info"></i> About
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <i class="fas fa-lock" style="margin-right:.3rem;color:var(--accent)"></i>
+      Secured by ML Pipeline &nbsp;|&nbsp; v2.0
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════ TOPBAR ═══════════════════════════ -->
+  <header id="topbar">
+    <button class="topbar-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="topbar-title">Credit Score <span>Prediction</span></div>
+    <div class="topbar-badge ms-auto">
+      <span class="dot"></span> Model Active
+    </div>
+    <div class="topbar-badge ms-2 d-none d-md-flex">
+      <i class="fas fa-calendar-alt" style="color:var(--accent)"></i>
+      <span id="topDate"></span>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ MAIN CONTENT ═══════════════════════════ -->
+  <main id="main">
+
+    <!-- ━━━━━━━━━━━━━━ DASHBOARD ━━━━━━━━━━━━━━ -->
+    <section id="sec-dashboard" class="content-section active">
+      <div class="breadcrumb-glass"><i class="fas fa-home"></i> / <span>Dashboard</span></div>
+      <div class="section-title">Dashboard Overview</div>
+      <div class="section-sub">Real-time credit risk intelligence at a glance.</div>
+
+      <!-- Stat Row -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3">
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-users" style="color:#fff"></i></div>
+            <div class="stat-val">{{ boxData_1.total }}</div>
+            <div class="stat-label">Total Applicants</div>
+            <div class="stat-trend up"><i class="fas fa-arrow-trend-up"></i> +12.4% this month</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-shield-halved" style="color:#fff"></i></div>
+            <div class="stat-val">{{ boxData_1.low_risk }}%</div>
+            <div class="stat-label">Low Risk Rate</div>
+            <div class="stat-trend up"><i class="fas fa-arrow-trend-up"></i> +2.1% vs last</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-triangle-exclamation" style="color:#fff"></i></div>
+            <div class="stat-val">{{ boxData_1.high_risk }}%</div>
+            <div class="stat-label">High Risk Rate</div>
+            <div class="stat-trend down"><i class="fas fa-arrow-trend-down"></i> -2.1% vs last</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl-3">
+          <div class="stat-card">
+            <div class="stat-icon cyan"><i class="fas fa-microchip" style="color:#fff"></i></div>
+            <div class="stat-val">{{ boxData_1.Accuracy }}%</div>
+            <div class="stat-label">Model ROC-AUC</div>
+            <div class="stat-trend up"><i class="fas fa-arrow-trend-up"></i> AUC 0.96</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-chart-column"></i></div>
+              <div><h5>Model Comparison</h5><p>6 Models (With + Without Optimization) - Accuracy, ROC-AUC & Weighted Precision</p></div>
+            </div>
+            <div class="chart-container" style="height:265px">
+              <canvas id="dashModelChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="glass-card h-100">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-chart-pie"></i></div>
+              <div><h5>Risk Distribution</h5><p>Current portfolio</p></div>
+            </div>
+            <div class="chart-container" style="height:190px">
+              <canvas id="dashPieChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model metrics + recent predictions -->
+      <div class="row g-3 align-items-stretch">
+        <div class="col-lg-8">
+          <div class="glass-card h-100">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-table-list"></i></div>
+              <div><h5>Model Performance Metrics</h5><p>Linear Regression, XGBoost, Balanced Random Forest (With & Without Optimization)</p></div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="metrics-table">
+                <thead>
+                  <tr>
+                    <th>Model</th><th>Setup</th><th>Accuracy</th><th>ROC-AUC</th><th>Weighted Precision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="metric-model">Logistic Regression</span></td>
+                    <td><span class="metric-param default">Without Optimization</span></td>
+                    <td>93.72%</td><td>58.95%</td><td>92.00%</td>
+                  </tr>
+                  <tr>
+                    <td><span class="metric-model">Logistic Regression</span></td>
+                    <td><span class="metric-param tuned">With Optimization</span></td>
+                    <td>93.72%</td><td>85.02%</td><td>92.00%</td>
+                  </tr>
+                  <tr>
+                    <td><span class="metric-model">XGBoost</span></td>
+                    <td><span class="metric-param default">Without Optimization</span></td>
+                    <td>93.59%</td><td>58.95%</td><td>92.00%</td>
+                  </tr>
+                  <tr>
+                    <td><span class="metric-model">XGBoost</span></td>
+                    <td><span class="metric-param tuned">With Optimization</span></td>
+                    <td>93.87%</td><td>86.47%</td><td>92.00%</td>
+                  </tr>
+                  <tr>
+                    <td><span class="metric-model">Balanced Random Forest</span></td>
+                    <td><span class="metric-param default">Without Optimization</span></td>
+                    <td>84.71%</td><td>76.82%</td><td>93.00%</td>
+                  </tr>
+                  <tr>
+                    <td><span class="metric-model">Balanced Random Forest</span></td>
+                    <td><span class="metric-param tuned">With Optimization</span></td>
+                    <td>80.85%</td><td>86.33%</td><td>93.00%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="glass-card h-100">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-clock-rotate-left"></i></div>
+              <div><h5>Recent Predictions</h5><p>Last 5 queries</p></div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="table-glass">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Age</th><th>Debt Ratio</th><th>Income</th><th>Risk</th><th>Score</th>
+                  </tr>
+                </thead>
+                <tbody id="recentTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━ PREDICTION FORM ━━━━━━━━━━━━━━ -->
+    <section id="sec-prediction" class="content-section">
+      <div class="breadcrumb-glass"><i class="fas fa-home"></i> / <span>Prediction Form</span></div>
+      <div class="section-title">Credit Risk Prediction</div>
+      <div class="section-sub">Fill in the applicant's financial profile to get an AI-powered risk assessment.</div>
+
+      <div class="row g-4">
+        <!-- Form column -->
+        <div class="col-xl-7">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-file-invoice-dollar"></i></div>
+              <div><h5>Applicant Information</h5><p>All fields are required for accurate prediction</p></div>
+            </div>
+
+            <!-- Django template: use {% csrf_token %} and action="{% url 'predict' %}" -->
+            <form id="predForm" method="POST" action="{% url 'predict' %}" novalidate>
+                {% csrf_token %}
+              <!-- CSRF Token (Django) -->
+              <input type="hidden" name="csrfmiddlewaretoken" id="csrfToken" value="{{ csrf_token }}"/>
+
+              <!-- Django error block -->
+              <div id="djangoErrors" style="display:none" class="mb-3"></div>
+
+              <div class="row g-3">
+
+                <!-- RevolvingUtilization -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-credit-card" style="color:var(--accent);margin-right:.3rem"></i>Revolving Utilization</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-percent input-icon"></i>
+                    <input type="number" step="0.0001" min="0" max="100" class="input-glass" name="RevolvingUtilizationOfUnsecuredLines" id="f-rev" placeholder="e.g. 0.7521" required/>
+                  </div>
+                  <div class="field-hint">Ratio of unsecured balance to credit limit</div>
+                  <div class="invalid-feedback-glass">Enter a valid utilization ratio.</div>
+                </div>
+
+                <!-- Age -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-user" style="color:var(--primary);margin-right:.3rem"></i>Age</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-calendar input-icon"></i>
+                    <input type="number" min="18" max="120" class="input-glass" name="age" id="f-age" placeholder="e.g. 45" required/>
+                  </div>
+                  <div class="field-hint">Applicant's age in years (18–120)</div>
+                  <div class="invalid-feedback-glass">Enter a valid age (18–120).</div>
+                </div>
+
+                <!-- 30-59 Days Past Due -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-clock" style="color:var(--warning);margin-right:.3rem"></i>30–59 Days Past Due</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-hourglass-half input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberOfTime30-59DaysPastDueNotWorse" id="f-30" placeholder="e.g. 2" required/>
+                  </div>
+                  <div class="field-hint">Times 30–59 days past due (not worse)</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+                <!-- Debt Ratio -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-scale-balanced" style="color:var(--secondary);margin-right:.3rem"></i>Debt Ratio</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-balance-scale input-icon"></i>
+                    <input type="number" step="0.0001" min="0" class="input-glass" name="DebtRatio" id="f-debt" placeholder="e.g. 0.3491" required/>
+                  </div>
+                  <div class="field-hint">Monthly debt payments / gross monthly income</div>
+                  <div class="invalid-feedback-glass">Enter a valid debt ratio.</div>
+                </div>
+
+                <!-- Monthly Income -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-dollar-sign" style="color:var(--success);margin-right:.3rem"></i>Monthly Income</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-money-bill-wave input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="MonthlyIncome" id="f-income" placeholder="e.g. 5400" required/>
+                  </div>
+                  <div class="field-hint">Gross monthly income in USD</div>
+                  <div class="invalid-feedback-glass">Enter a valid income amount.</div>
+                </div>
+
+                <!-- Open Credit Lines -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-credit-card" style="color:var(--accent);margin-right:.3rem"></i>Open Credit Lines</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-list-ol input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberOfOpenCreditLinesAndLoans" id="f-open" placeholder="e.g. 8" required/>
+                  </div>
+                  <div class="field-hint">Number of open loans and credit lines</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+                <!-- 90 Days Late -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-triangle-exclamation" style="color:var(--danger);margin-right:.3rem"></i>90 Days Late</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-calendar-xmark input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberOfTimes90DaysLate" id="f-90" placeholder="e.g. 0" required/>
+                  </div>
+                  <div class="field-hint">Times 90+ days past due</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+                <!-- Real Estate Loans -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-house" style="color:var(--primary);margin-right:.3rem"></i>Real Estate Loans</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-building input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberRealEstateLoansOrLines" id="f-re" placeholder="e.g. 1" required/>
+                  </div>
+                  <div class="field-hint">Number of mortgage / real estate loans</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+                <!-- 60-89 Days Past Due -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-clock" style="color:var(--warning);margin-right:.3rem"></i>60–89 Days Past Due</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-hourglass input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberOfTime60-89DaysPastDueNotWorse" id="f-60" placeholder="e.g. 0" required/>
+                  </div>
+                  <div class="field-hint">Times 60–89 days past due (not worse)</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+                <!-- Dependents -->
+                <div class="col-sm-6">
+                  <label class="form-label"><i class="fas fa-people-group" style="color:var(--secondary);margin-right:.3rem"></i>Number of Dependents</label>
+                  <div class="input-group-glass">
+                    <i class="fas fa-child input-icon"></i>
+                    <input type="number" min="0" class="input-glass" name="NumberOfDependents" id="f-dep" placeholder="e.g. 2" required/>
+                  </div>
+                  <div class="field-hint">Family members excluding self</div>
+                  <div class="invalid-feedback-glass">Enter a non-negative number.</div>
+                </div>
+
+              </div><!-- /row -->
+
+              <hr class="divider"/>
+
+              <div class="d-flex gap-3 flex-wrap">
+                <button type="submit" class="btn-gradient d-flex align-items-center gap-2" id="predictBtn">
+                  <i class="fas fa-brain"></i> <span>Predict Now</span>
+                </button>
+                <button type="button" class="btn-ghost d-flex align-items-center gap-2" onclick="resetForm()">
+                  <i class="fas fa-rotate-left"></i> Reset
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Result column -->
+        <div class="col-xl-5">
+          <!-- How it works -->
+          <div class="glass-card mb-4">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-circle-question"></i></div>
+              <div><h5>How It Works</h5><p>3-step AI prediction</p></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.75rem;">
+              <div class="about-feature">
+                <div class="about-feature-icon" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)"><i class="fas fa-1" style="color:#fff;font-size:.9rem"></i></div>
+                <div><div style="font-weight:600;font-size:.88rem;color:#fff">Fill the Form</div><div style="font-size:.78rem;color:var(--text-muted)">Enter financial & demographic data</div></div>
+              </div>
+              <div class="about-feature">
+                <div class="about-feature-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)"><i class="fas fa-2" style="color:#fff;font-size:.9rem"></i></div>
+                <div><div style="font-weight:600;font-size:.88rem;color:#fff">AI Processing</div><div style="font-size:.78rem;color:var(--text-muted)">XGBoost model analyzes features</div></div>
+              </div>
+              <div class="about-feature">
+                <div class="about-feature-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="fas fa-3" style="color:#fff;font-size:.9rem"></i></div>
+                <div><div style="font-weight:600;font-size:.88rem;color:#fff">Get Result</div><div style="font-size:.78rem;color:var(--text-muted)">Instant risk level & probability score</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Result display area -->
+          <div id="resultArea">
+            <!-- Default empty state -->
+            <div class="glass-card text-center" id="emptyResult">
+              <div style="padding:2rem 1rem">
+                <div style="font-size:3.5rem;margin-bottom:1rem;opacity:.3"><i class="fas fa-robot"></i></div>
+                <div style="font-size:1rem;font-weight:600;color:rgba(255,255,255,.4)">Awaiting Prediction</div>
+                <div style="font-size:.8rem;color:rgba(255,255,255,.2);margin-top:.4rem">Submit the form to see results</div>
+              </div>
+            </div>
+
+            <!-- Loading state (hidden) -->
+            <div class="glass-card text-center" id="loadingResult" style="display:none">
+              <div style="padding:2.5rem 1rem">
+                <div class="spinner-ring" style="width:48px;height:48px;border-width:5px;margin:0 auto 1rem"></div>
+                <div style="font-size:.95rem;font-weight:600;color:rgba(255,255,255,.7)">Processing...</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.3);margin-top:.3rem">AI model analyzing features</div>
+              </div>
+            </div>
+
+            <!-- Actual result (hidden until predicted) -->
+            <div id="predResult" style="display:none"></div>
+
+            <!-- Django server-rendered result block -->
+            <!-- {% if prediction_result %} -->
+            <div id="djangoResultWrap" style="display:none">
+              <div id="djangoResult" class="result-card">
+                <!-- Populated by Django template or JS -->
+              </div>
+            </div>
+            <!-- {% endif %} -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━ ANALYTICS ━━━━━━━━━━━━━━ -->
+    <section id="sec-analytics" class="content-section">
+      <div class="breadcrumb-glass"><i class="fas fa-home"></i> / <span>Analytics</span></div>
+      <div class="section-title">Analytics & Insights</div>
+      <div class="section-sub">Visualizations based on historical credit risk data from 150k+ applicants.</div>
+
+      <div class="row g-4 mb-4">
+        <!-- Bar Chart -->
+        <div class="col-lg-6">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-chart-bar"></i></div>
+              <div><h5>Late Payment Frequency</h5><p>30-59: {{ NumberOfTime30_59DaysPastDueNotWorse }} | 60-89: {{ NumberOfTime60_89DaysPastDueNotWorse }} | 90+: {{ NumberOfTimes90DaysLate }}</p></div>
+            </div>
+            <div class="chart-container" style="height:250px">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie Chart -->
+        <div class="col-lg-6">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-chart-pie"></i></div>
+              <div><h5>Risk Distribution</h5><p>Portfolio risk breakdown | Low: {{ boxData_2.low_risk }} | High: {{ boxData_2.high_risk }}</p></div>
+            </div>
+            <div class="chart-container" style="height:250px">
+              <canvas id="pieChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Income Distribution Chart -->
+        <div class="col-lg-6">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-sack-dollar"></i></div>
+              <div><h5>Monthly Income Distribution</h5><p>Database-driven income brackets</p></div>
+            </div>
+            <div class="chart-container" style="height:250px">
+              <canvas id="incomeChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Histogram -->
+        <div class="col-lg-6">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-bar-chart"></i></div>
+              <div><h5>Age Distribution</h5><p>Applicant age histogram from database (pandas)</p></div>
+            </div>
+            <div class="chart-container" style="height:250px">
+              <canvas id="histChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="row g-3 mt-1">
+        <div class="col-12">
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-table-list"></i></div>
+              <div><h5>Dataset Summary Statistics</h5><p>Descriptive stats across key features</p></div>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="table-glass">
+                <thead>
+                  <tr>
+                    <th>Feature</th><th>Min</th><th>Max</th><th>Mean</th><th>Std Dev</th><th>Null %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in summary_stats %}
+                  <tr>
+                    <td>{{ row.feature }}</td>
+                    <td>{{ row.min }}</td>
+                    <td>{{ row.max }}</td>
+                    <td>{{ row.mean }}</td>
+                    <td>{{ row.std }}</td>
+                    <td>{{ row.null_pct }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6">No summary statistics available.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━ ABOUT ━━━━━━━━━━━━━━ -->
+    <section id="sec-about" class="content-section">
+      <div class="breadcrumb-glass"><i class="fas fa-home"></i> / <span>About</span></div>
+      <div class="section-title">About CreditAI</div>
+      <div class="section-sub">Understanding the technology behind our prediction engine.</div>
+
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <div class="glass-card mb-4">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-brain"></i></div>
+              <div><h5>ML Model Overview</h5><p>XGBoost Classifier</p></div>
+            </div>
+            <p style="font-size:.875rem;color:var(--text-muted);line-height:1.8;margin-bottom:1rem">
+              Our Credit Score Prediction System leverages a tuned <strong style="color:#fff">XGBoost Classifier</strong> trained on the
+              <strong style="color:#fff">Give Me Some Credit</strong> dataset (150,000 records). The model predicts whether an applicant is
+              likely to experience serious financial distress within 2 years, with an AUC score of <strong style="color:var(--accent)">0.8647</strong>.
+            </p>
+            <div class="row g-3">
+              <div class="col-sm-4 text-center">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--accent)">93.72%</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">Accuracy</div>
+              </div>
+              <div class="col-sm-4 text-center">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--success)">0.8647</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">AUC Score</div>
+              </div>
+              <div class="col-sm-4 text-center">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--warning)">150k</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">Training Samples</div>
+              </div>
+            </div>
+            <hr class="divider"/>
+            <div style="font-size:.82rem;color:var(--text-muted)">
+              <strong style="color:#fff">Preprocessing steps:</strong> Missing value imputation (median for income, mode for dependents),
+              feature scaling (StandardScaler), SMOTE oversampling for class imbalance, and hyperparameter tuning via GridSearchCV.
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-server"></i></div>
+              <div><h5>Django Integration</h5><p>Backend architecture</p></div>
+            </div>
+            <div class="about-feature">
+              <div class="about-feature-icon" style="background:linear-gradient(135deg,#059669,#10b981)"><i class="fab fa-python" style="color:#fff;font-size:.9rem"></i></div>
+              <div><div style="font-weight:600;font-size:.88rem;color:#fff">Django 4.x Backend</div><div style="font-size:.78rem;color:var(--text-muted)">Handles POST to <code style="color:var(--accent)">/predict/</code> with CSRF protection</div></div>
+            </div>
+            <div class="about-feature">
+              <div class="about-feature-icon" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)"><i class="fas fa-cogs" style="color:#fff;font-size:.9rem"></i></div>
+              <div><div style="font-weight:600;font-size:.88rem;color:#fff">Pickle Model Loading</div><div style="font-size:.78rem;color:var(--text-muted)">Model loaded once at startup via <code style="color:var(--accent)">joblib.load()</code></div></div>
+            </div>
+            <div class="about-feature">
+              <div class="about-feature-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)"><i class="fas fa-shield-halved" style="color:#fff;font-size:.9rem"></i></div>
+              <div><div style="font-weight:600;font-size:.88rem;color:#fff">CSRF Token Security</div><div style="font-size:.78rem;color:var(--text-muted)">All requests include Django's <code style="color:var(--accent)">{% verbatim %}{% csrf_token %}{% endverbatim %}</code></div></div>
+            </div>
+            <div class="about-feature">
+              <div class="about-feature-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-bolt" style="color:#fff;font-size:.9rem"></i></div>
+              <div><div style="font-weight:600;font-size:.88rem;color:#fff">Async Fetch API</div><div style="font-size:.78rem;color:var(--text-muted)">Non-blocking JSON POST for seamless UX</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="glass-card mb-4">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-ranking-star"></i></div>
+              <div><h5>Top Feature Weights</h5><p>Model importance scores</p></div>
+            </div>
+            <div id="aboutFeatureBars"></div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header-glass">
+              <div class="icon-wrap"><i class="fas fa-code"></i></div>
+              <div><h5>Tech Stack</h5><p>Libraries & frameworks used</p></div>
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fab fa-python" style="font-size:1.5rem;color:#4f9cf9;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">Python 3.11</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fas fa-database" style="font-size:1.5rem;color:#10b981;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">scikit-learn</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fas fa-leaf" style="font-size:1.5rem;color:#44b883;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">Django 4.x</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fas fa-chart-bar" style="font-size:1.5rem;color:#f59e0b;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">Chart.js</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fas fa-table" style="font-size:1.5rem;color:#7c3aed;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">pandas / numpy</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:.75rem;text-align:center;border:1px solid var(--border-glass)">
+                  <i class="fab fa-bootstrap" style="font-size:1.5rem;color:#7952b3;margin-bottom:.3rem;display:block"></i>
+                  <div style="font-size:.78rem;font-weight:600;color:#fff">Bootstrap 5</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /main -->
+
+  <!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
+  <script>
+  /* ─────────────────────────────────────────────
+     GLOBALS & UTILITIES
+  ───────────────────────────────────────────── */
+  const $ = id => document.getElementById(id);
+
+  // Live date in topbar
+  const dateEl = $('topDate');
+  if (dateEl) {
+    const now = new Date();
+    dateEl.textContent = now.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+  }
+
+  /* ─────────────────────────────────────────────
+     SIDEBAR TOGGLE
+  ───────────────────────────────────────────── */
+  let sidebarOpen = window.innerWidth >= 992;
+
+  function toggleSidebar() {
+    const sb = $('sidebar'), tb = $('topbar'), mn = $('main'), ov = $('overlay');
+    if (window.innerWidth < 992) {
+      sb.classList.toggle('mobile-open');
+      ov.classList.toggle('show');
+    } else {
+      sidebarOpen = !sidebarOpen;
+      if (sidebarOpen) {
+        sb.classList.remove('collapsed');
+        tb.classList.remove('expanded');
+        mn.classList.remove('expanded');
+      } else {
+        sb.classList.add('collapsed');
+        tb.classList.add('expanded');
+        mn.classList.add('expanded');
+      }
+    }
+  }
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 992) {
+      $('sidebar').classList.remove('mobile-open');
+      $('overlay').classList.remove('show');
+    }
+  });
+
+  /* ─────────────────────────────────────────────
+     SECTION NAVIGATION
+  ───────────────────────────────────────────── */
+  function showSection(name) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    // Remove active from nav links
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+    // Show target section
+    const sec = $('sec-' + name);
+    if (sec) sec.classList.add('active');
+
+    // Activate nav link
+    const links = document.querySelectorAll('.nav-link');
+    links.forEach(l => {
+      if (l.getAttribute('onclick') && l.getAttribute('onclick').includes(name)) {
+        l.classList.add('active');
+      }
+    });
+
+    // Close mobile sidebar
+    if (window.innerWidth < 992) {
+      $('sidebar').classList.remove('mobile-open');
+      $('overlay').classList.remove('show');
+    }
+
+    // Lazy-init charts on analytics
+    if (name === 'analytics' && !chartsInitialized) {
+      initAnalyticsCharts();
+      chartsInitialized = true;
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     CSRF HELPER (Django)
+  ───────────────────────────────────────────── */
+  function getCsrfToken() {
+    // First try from meta or hidden input rendered by Django
+    const tokenEl = $('csrfToken');
+    if (tokenEl && tokenEl.value && tokenEl.value !== '{{ csrf_token }}') {
+      return tokenEl.value;
+    }
+    // Fallback: read from cookie
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  /* ─────────────────────────────────────────────
+     FORM VALIDATION
+  ───────────────────────────────────────────── */
+  function validateForm() {
+    let valid = true;
+    const form = $('predForm');
+    const inputs = form.querySelectorAll('.input-glass[required]');
+    inputs.forEach(inp => {
+      inp.classList.remove('is-invalid');
+      if (!inp.value || inp.value.trim() === '') {
+        inp.classList.add('is-invalid');
+        valid = false;
+      } else if (inp.type === 'number') {
+        const val = parseFloat(inp.value);
+        if (isNaN(val) || (inp.min !== '' && val < parseFloat(inp.min))) {
+          inp.classList.add('is-invalid');
+          valid = false;
+        }
+        if (inp.id === 'f-age' && (val < 18 || val > 120)) {
+          inp.classList.add('is-invalid');
+          valid = false;
+        }
+      }
+    });
+    return valid;
+  }
+
+  /* ─────────────────────────────────────────────
+     RESET FORM
+  ───────────────────────────────────────────── */
+  function resetForm() {
+    $('predForm').reset();
+    $('predForm').querySelectorAll('.input-glass').forEach(i => i.classList.remove('is-invalid'));
+    $('emptyResult').style.display = '';
+    $('loadingResult').style.display = 'none';
+    $('predResult').style.display = 'none';
+    $('predResult').innerHTML = '';
+  }
+
+  const DEFAULT_PROBABILITY_THRESHOLD = 0.06844512;
+
+  /* ─────────────────────────────────────────────
+     PREDICTION SUBMIT — async JSON POST (no navigation)
+  ───────────────────────────────────────────── */
+  $('predForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const form = this;
+    const btn = $('predictBtn');
+    const btnOriginalHtml = btn.innerHTML;
+
+    $('emptyResult').style.display = 'none';
+    $('predResult').style.display = 'none';
+    $('loadingResult').style.display = '';
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-ring" style="width:18px;height:18px;border-width:3px"></span> <span>Predicting...</span>';
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        }
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Prediction endpoint returned non-JSON response. Ensure request is sent to /predict/.');
+      }
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.annotation || 'Prediction failed');
+      }
+
+      renderResult(data);
+    } catch (err) {
+      const resultDiv = $('predResult');
+      resultDiv.innerHTML = `
+        <div class="alert-glass" role="alert">
+          <i class="fas fa-triangle-exclamation"></i>
+          <div>
+            <strong>Prediction failed</strong>
+            <div>${String(err.message || err)}</div>
+          </div>
+        </div>`;
+      resultDiv.style.display = '';
+    } finally {
+      $('loadingResult').style.display = 'none';
+      btn.disabled = false;
+      btn.innerHTML = btnOriginalHtml;
+    }
+  });
+
+  /* ─────────────────────────────────────────────
+     SIMULATE PREDICTION (demo / fallback)
+  ───────────────────────────────────────────── */
+  function simulatePrediction(formData) {
+    return {
+      prediction: 'NA',
+      probability_of_default: 'NA',
+      annotation: 'NA'
+    };
+  }
+
+  /* ─────────────────────────────────────────────
+     RENDER PREDICTION RESULT
+  ───────────────────────────────────────────── */
+  function renderResult(data) {
+    const toProbPercent = value => {
+      if (value === undefined || value === null) return null;
+      const normalized = String(value).replace('%', '').trim();
+      if (!normalized) return null;
+      const n = Number(normalized);
+      if (!Number.isFinite(n)) return null;
+      const pct = n <= 1 ? n * 100 : n;
+      return Math.max(0, Math.min(100, pct));
+    };
+
+    const probabilityPct = toProbPercent(data.probability ?? data.probability_of_default);
+    const prediction = String(data.prediction ?? '').trim();
+    const annotation = String(data.annotation ?? '').toLowerCase();
+
+    let riskKey = 'medium';
+    if (probabilityPct !== null) {
+      if (probabilityPct <= 20) {
+        riskKey = 'low';
+      } else if (probabilityPct <= 50) {
+        riskKey = 'medium';
+      } else {
+        riskKey = 'high';
+      }
+    } else if (annotation.includes('high')) {
+      riskKey = 'high';
+    } else if (annotation.includes('medium')) {
+      riskKey = 'medium';
+    } else if (annotation.includes('low') || annotation.includes('safe')) {
+      riskKey = 'low';
+    } else if (prediction === '1') {
+      riskKey = 'high';
+    } else if (prediction === '0') {
+      riskKey = 'low';
+    }
+
+    const riskMap = {
+      low: {
+        title: 'Very Safe',
+        message: 'This applicant shows healthy financial patterns. Low probability of serious default.',
+        recommendation: 'APPROVE',
+        level: 'Safe',
+        icon: 'fa-check',
+        cardClass: 'risk-low',
+        textClass: 'low',
+        ringClass: 'low'
+      },
+      medium: {
+        title: 'Medium Risk',
+        message: 'Some risk signals are present. A manual review is recommended before final approval.',
+        recommendation: 'REVIEW',
+        level: 'Medium',
+        icon: 'fa-scale-balanced',
+        cardClass: 'risk-medium',
+        textClass: 'medium',
+        ringClass: 'medium'
+      },
+      high: {
+        title: 'High Risk',
+        message: 'Default probability is elevated. Proceed with strict controls or decline this application.',
+        recommendation: 'DECLINE',
+        level: 'High',
+        icon: 'fa-triangle-exclamation',
+        cardClass: 'risk-high',
+        textClass: 'high',
+        ringClass: 'high'
+      }
+    };
+
+    const modelDefinitions = [
+      { key: 'logistic_regression', label: 'Logistic Regression' },
+      { key: 'xgboost', label: 'XGBoost' },
+      { key: 'random_forest', label: 'Random Forest' }
+    ];
+
+    const modelPayload = data.models && typeof data.models === 'object' ? data.models : {};
+
+    const toneClass = value => {
+      const normalized = String(value ?? '').toLowerCase();
+      if (normalized.includes('high')) return 'high';
+      if (normalized.includes('medium')) return 'medium';
+      if (normalized.includes('low') || normalized.includes('safe')) return 'low';
+      return '';
+    };
+
+    const modelDetailsHtml = modelDefinitions.map(modelMeta => {
+      const modelInfo = modelPayload[modelMeta.key] || {};
+      const modelPrediction = modelInfo.prediction === undefined || modelInfo.prediction === null
+        ? 'NA'
+        : String(modelInfo.prediction);
+      const modelProb = toProbPercent(modelInfo.prob ?? modelInfo.probability);
+      const modelProbText = modelProb === null ? 'NA' : `${modelProb.toFixed(2)}%`;
+      const modelAnno = String(modelInfo.anno ?? modelInfo.annotation ?? 'NA');
+      const modelAnnoTone = toneClass(modelAnno);
+
+      return `
+          <div class="model-result-item">
+            <div class="model-result-head">${modelMeta.label}</div>
+            <div class="model-result-grid">
+              <div>
+                <div class="model-result-label">Prediction</div>
+                <div class="model-result-value">${modelPrediction}</div>
+              </div>
+              <div>
+                <div class="model-result-label">Prob</div>
+                <div class="model-result-value">${modelProbText}</div>
+              </div>
+              <div>
+                <div class="model-result-label">Anno</div>
+                <div class="model-result-value ${modelAnnoTone}">${modelAnno}</div>
+              </div>
+            </div>
+          </div>`;
+    }).join('');
+
+    const profile = riskMap[riskKey];
+    const percentText = probabilityPct === null ? 'NA' : probabilityPct.toFixed(1);
+    const ringPct = probabilityPct === null ? 0 : probabilityPct;
+    const radius = 54;
+    const circumference = 2 * Math.PI * radius;
+    const dashOffset = circumference - (ringPct / 100) * circumference;
+
+    const html = `
+      <div class="result-card ${profile.cardClass}">
+        <div class="risk-ring-wrap" aria-label="Risk probability gauge">
+          <svg viewBox="0 0 140 140" role="img" aria-hidden="true">
+            <circle class="risk-ring-bg" cx="70" cy="70" r="${radius}"></circle>
+            <circle class="risk-ring-fg ${profile.ringClass}" cx="70" cy="70" r="${radius}" style="stroke-dasharray:${circumference};stroke-dashoffset:${dashOffset};"></circle>
+          </svg>
+          <div class="risk-ring-text">
+            <div class="risk-ring-value">${percentText}</div>
+            <div class="risk-ring-unit">%</div>
+          </div>
+        </div>
+
+        <div class="risk-icon ${profile.textClass}"><i class="fas ${profile.icon}"></i></div>
+        <div class="risk-title ${profile.textClass}">${profile.title}</div>
+        <div class="risk-message">${profile.message}</div>
+
+        <div class="result-divider"></div>
+
+        <div class="result-metrics">
+          <div>
+            <div class="result-metric-value ${profile.textClass}">${percentText}%</div>
+            <div class="result-metric-label">Risk Prob.</div>
+          </div>
+          <div>
+            <div class="result-metric-value">${profile.recommendation}</div>
+            <div class="result-metric-label">Recommendation</div>
+          </div>
+          <div>
+            <div class="result-metric-value">${profile.level}</div>
+            <div class="result-metric-label">Risk Level</div>
+          </div>
+        </div>
+
+        <div class="result-divider"></div>
+
+        <div class="model-results-title">All Models</div>
+        <div class="model-results-grid">
+          ${modelDetailsHtml}
+        </div>
+      </div>`;
+
+    const resultDiv = $('predResult');
+    resultDiv.innerHTML = html;
+    resultDiv.style.display = '';
+  }
+
+  /* ─────────────────────────────────────────────
+     CHART DEFAULTS (global)
+  ───────────────────────────────────────────── */
+  Chart.defaults.color = 'rgba(255,255,255,0.5)';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+  const GRAD_BLUE   = ['rgba(79,70,229,0.8)', 'rgba(79,70,229,0.2)'];
+  const GRAD_PURPLE = ['rgba(124,58,237,0.8)', 'rgba(124,58,237,0.2)'];
+  const GRAD_CYAN   = ['rgba(6,182,212,0.8)', 'rgba(6,182,212,0.2)'];
+  const GRAD_GREEN  = ['rgba(16,185,129,0.8)', 'rgba(16,185,129,0.2)'];
+  const GRAD_RED    = ['rgba(239,68,68,0.8)', 'rgba(239,68,68,0.2)'];
+
+  function makeGrad(ctx, colors, vertical=true) {
+    const g = ctx.createLinearGradient(0, 0, vertical ? 0 : ctx.canvas.width, vertical ? ctx.canvas.height : 0);
+    g.addColorStop(0, colors[0]);
+    g.addColorStop(1, colors[1]);
+    return g;
+  }
+
+  const commonScales = {
+    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.45)', font:{size:11} } },
+    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.45)', font:{size:11} } }
+  };
+
+  /* ─────────────────────────────────────────────
+     DASHBOARD CHARTS (always init)
+  ───────────────────────────────────────────── */
+  (function initDashCharts() {
+    // Model comparison chart
+    const ctxM = document.getElementById('dashModelChart');
+    if (ctxM) {
+      const c = ctxM.getContext('2d');
+      new Chart(c, {
+        type: 'bar',
+        data: {
+          labels: ['LR (W/O)', 'LR (Opt)', 'XGB (W/O)', 'XGB (Opt)', 'BRF (W/O)', 'BRF (Opt)'],
+          datasets: [{
+            label: 'Accuracy (%)',
+            data: [93.72, 93.72, 93.59, 93.87, 84.71, 80.85],
+            backgroundColor: 'rgba(79,70,229,0.75)',
+            borderColor: 'rgba(99,102,241,0.95)',
+            borderWidth: 1,
+            borderRadius: 8,
+            borderSkipped: false,
+            categoryPercentage: 0.72,
+            barPercentage: 0.9
+          }, {
+            label: 'ROC-AUC (%)',
+            data: [58.95, 85.02, 58.95, 86.47, 76.82, 86.33],
+            backgroundColor: 'rgba(6,182,212,0.78)',
+            borderColor: 'rgba(34,211,238,0.95)',
+            borderWidth: 1,
+            borderRadius: 8,
+            borderSkipped: false,
+            categoryPercentage: 0.72,
+            barPercentage: 0.9
+          }, {
+            label: 'Weighted Precision (%)',
+            data: [92.0, 92.0, 92.0, 92.0, 93.0, 93.0],
+            backgroundColor: 'rgba(124,58,237,0.78)',
+            borderColor: 'rgba(139,92,246,0.95)',
+            borderWidth: 1,
+            borderRadius: 8,
+            borderSkipped: false,
+            categoryPercentage: 0.72,
+            barPercentage: 0.9
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: 'rgba(255,255,255,.7)',
+                boxWidth: 14,
+                boxHeight: 14,
+                font: { size: 11 }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: 'rgba(255,255,255,0.52)', font: { size: 11 } }
+            },
+            y: {
+              min: 50,
+              max: 100,
+              grid: { color: 'rgba(255,255,255,0.07)' },
+              ticks: {
+                color: 'rgba(255,255,255,0.52)',
+                stepSize: 10,
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Pie chart
+    const ctxP = document.getElementById('dashPieChart');
+    if (ctxP) {
+      new Chart(ctxP.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Low Risk', 'High Risk'],
+          datasets: [{
+            data: [{{boxData_2.low_risk}}, {{boxData_2.high_risk}}],
+            backgroundColor: ['rgba(16,185,129,0.75)','rgba(239,68,68,0.75)'],
+            borderColor: ['rgba(16,185,129,1)','rgba(239,68,68,1)'],
+            borderWidth: 2, hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '68%',
+          plugins: {
+            legend: { position:'bottom', labels: { color:'rgba(255,255,255,.65)', boxWidth:12, font:{size:11}, padding:14 } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` } }
+          }
+        }
+      });
+    }
+  })();
+
+    /* ─────────────────────────────────────────────
+      TOP FEATURE WEIGHTS BARS (ABOUT SECTION)
+    ───────────────────────────────────────────── */
+  const featureData = [
+    { name: 'Revolving Utilization', pct: 92 },
+    { name: '90 Days Late',          pct: 81 },
+    { name: 'Debt Ratio',            pct: 74 },
+    { name: '30–59 Days Past Due',   pct: 68 },
+    { name: 'Monthly Income',        pct: 61 },
+    { name: 'Age',                   pct: 55 },
+    { name: 'Open Credit Lines',     pct: 44 },
+    { name: 'Real Estate Loans',     pct: 38 },
+  ];
+
+  function renderFeatureBars(containerId) {
+    const el = $(containerId);
+    if (!el) return;
+    el.innerHTML = featureData.map(f => `
+      <div class="feat-bar-wrap">
+        <div class="feat-bar-label"><span>${f.name}</span><span>${f.pct}%</span></div>
+        <div class="feat-bar-track">
+          <div class="feat-bar-fill" style="width:0%" data-target="${f.pct}%"></div>
+        </div>
+      </div>`).join('');
+    // Animate after paint
+    requestAnimationFrame(() => {
+      el.querySelectorAll('.feat-bar-fill').forEach(b => {
+        b.style.width = b.dataset.target;
+      });
+    });
+  }
+
+  // Keep feature bars only in About section.
+  renderFeatureBars('aboutFeatureBars');
+
+  /* ─────────────────────────────────────────────
+     RECENT PREDICTIONS TABLE
+  ───────────────────────────────────────────── */
+  (function fillRecentTable() {
+    const rows = [
+      {% for pred in boxData_3.Recent_Predictions %}
+      {
+        id: '#{{ pred.pk }}',
+        age: '{{ pred.age|default_if_none:"-" }}',
+        debt: '{{ pred.DebtRatio|default_if_none:"-" }}',
+        income: '$ {{ pred.MonthlyIncome|default_if_none:"-" }}',
+        risk: '{% if pred.PredictedSeriousDlqin2yrs_xgb == 1 %}High{% else %}Low{% endif %}',
+        score: '-'
+      },
+      {% endfor %}
+    ];
+    const tb = $('recentTable');
+    if (!tb) return;
+    tb.innerHTML = rows.map(r => {
+      const cls = r.risk === 'High' ? 'high' : 'low';
+      return `<tr>
+        <td style="color:var(--accent);font-weight:600">${r.id}</td>
+        <td>${r.age}</td><td>${r.debt}</td><td>${r.income}</td>
+        <td><span class="badge-risk ${cls}">${r.risk}</span></td>
+        <td style="font-weight:600">${r.score}</td>
+      </tr>`;
+    }).join('');
+  })();
+
+  /* ─────────────────────────────────────────────
+     ANALYTICS CHARTS (lazy load)
+  ───────────────────────────────────────────── */
+  let chartsInitialized = false;
+
+  function initAnalyticsCharts() {
+    // 1. Bar chart — late payments
+    const ctxBar = document.getElementById('barChart');
+    if (ctxBar) {
+      const c = ctxBar.getContext('2d');
+      new Chart(c, {
+        type: 'bar',
+        data: {
+          labels: ['30-59 Days Late','60-89 Days Late','90+ Days Late'],
+          datasets: [{
+            label: 'Late Payment Frequency',
+            data: [
+              {{ NumberOfTime30_59DaysPastDueNotWorse }},
+              {{ NumberOfTime60_89DaysPastDueNotWorse }},
+              {{ NumberOfTimes90DaysLate }}
+            ],
+            backgroundColor: ['rgba(79,70,229,0.8)', 'rgba(124,58,237,0.8)', 'rgba(6,182,212,0.8)'],
+            borderColor: ['rgba(99,102,241,0.95)', 'rgba(139,92,246,0.95)', 'rgba(34,211,238,0.95)'],
+            borderWidth: 1,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color:'rgba(255,255,255,.6)', boxWidth:12, font:{size:11} } } },
+          scales: { ...commonScales, y: { ...commonScales.y, ticks: { ...commonScales.y.ticks, callback: v => v >= 1000 ? (v/1000)+'k' : v } } }
+        }
+      });
+    }
+
+    // 2. Pie chart
+    const ctxPie = document.getElementById('pieChart');
+    if (ctxPie) {
+      new Chart(ctxPie.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Low Risk (0)', 'High Risk (1)'],
+          datasets: [{
+            data: [{{ boxData_2.low_risk }}, {{ boxData_2.high_risk }}],
+            backgroundColor: ['rgba(16,185,129,0.75)','rgba(239,68,68,0.75)'],
+            borderColor: ['#10b981','#ef4444'], borderWidth: 2, hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '65%',
+          plugins: {
+            legend: { position:'bottom', labels: { color:'rgba(255,255,255,.65)', boxWidth:12, padding:14, font:{size:11} } },
+            tooltip: { callbacks: { label: c => ` ${c.label}: ${c.parsed.toLocaleString()}` } }
+          }
+        }
+      });
+    }
+
+    // 3. Bar chart — monthly income distribution
+    const ctxIncome = document.getElementById('incomeChart');
+    if (ctxIncome) {
+      const c = ctxIncome.getContext('2d');
+      const incomeLabels = [{% for label in income_distribution_labels %}'{{ label }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+      const incomeCounts = [{% for val in income_distribution_counts %}{{ val }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      new Chart(c, {
+        type: 'bar',
+        data: {
+          labels: incomeLabels,
+          datasets: [{
+            label: 'Applicants',
+            data: incomeCounts,
+            backgroundColor: ['rgba(79,70,229,0.78)','rgba(99,102,241,0.78)','rgba(124,58,237,0.78)','rgba(59,130,246,0.78)','rgba(6,182,212,0.78)','rgba(16,185,129,0.78)'],
+            borderColor: ['rgba(99,102,241,0.95)','rgba(129,140,248,0.95)','rgba(139,92,246,0.95)','rgba(96,165,250,0.95)','rgba(34,211,238,0.95)','rgba(52,211,153,0.95)'],
+            borderWidth: 1,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display:false } },
+          scales: { ...commonScales, y: { ...commonScales.y, ticks: { ...commonScales.y.ticks, callback: v => v >= 1000 ? (v/1000)+'k' : v } } }
+        }
+      });
+    }
+
+    // 4. Histogram — age distribution (pandas from database)
+    const ctxHist = document.getElementById('histChart');
+    if (ctxHist) {
+      const c = ctxHist.getContext('2d');
+      const grad = c.createLinearGradient(0, 0, 0, 240);
+      grad.addColorStop(0, 'rgba(124,58,237,0.75)');
+      grad.addColorStop(1, 'rgba(124,58,237,0.1)');
+      const ageLabels = [{% for label in age_distribution_labels %}'{{ label }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+      const ageCounts = [{% for val in age_distribution_counts %}{{ val }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      new Chart(c, {
+        type: 'bar',
+        data: {
+          labels: ageLabels,
+          datasets: [{
+            label: 'Applicants',
+            data: ageCounts,
+            backgroundColor: grad, borderRadius: 6, borderSkipped: false, borderColor: 'rgba(124,58,237,0.9)', borderWidth:1
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display:false } },
+          scales: { ...commonScales, y: { ...commonScales.y, ticks: { ...commonScales.y.ticks, callback: v => v >= 1000 ? (v/1000)+'k' : v } } }
+        }
+      });
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     DJANGO TEMPLATE SERVER-RENDERED RESULT
+  ───────────────────────────────────────────── */
+  function parseTemplateNumber(value) {
+    const raw = String(value || '').trim();
+    if (!raw || raw === 'None' || raw.toLowerCase() === 'null') return null;
+    const n = Number(raw.replace('%', ''));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  (function renderServerPredictionIfAvailable() {
+    // Supports both direct keys and nested context keys from backend render().
+    const predRaw = '{{ prediction|default_if_none:"" }}' || '{{ context.prediction|default_if_none:"" }}';
+    const probRaw = '{{ probability|default_if_none:"" }}' || '{{ context.probability|default_if_none:"" }}' || '{{ probability_of_default|default_if_none:"" }}' || '{{ context.probability_of_default|default_if_none:"" }}';
+    const annotationRaw = '{{ annotation|default_if_none:""|escapejs }}' || '{{ context.annotation|default_if_none:""|escapejs }}';
+
+    const prediction = parseTemplateNumber(predRaw);
+    const probability = parseTemplateNumber(probRaw);
+    const annotation = (annotationRaw || '').trim();
+
+    if (prediction === null && probability === null && !annotation) return;
+
+    renderResult({
+      prediction,
+      probability: probRaw || probability,
+      annotation
+    });
+
+    $('emptyResult').style.display = 'none';
+    showSection('prediction');
+  })();
+
+  /* Demo: auto-show section from URL hash */
+  (function handleHash() {
+    const hash = window.location.hash.replace('#','');
+    const valid = ['dashboard','prediction','analytics','about'];
+    if (valid.includes(hash)) showSection(hash);
+  })();
+
+  /* Keyboard nav: Enter key on sidebar links */
+  document.querySelectorAll('.nav-link[tabindex]').forEach(link => {
+    link.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') link.click(); });
+  });
+
+  </script>
+</body>
+</html>
