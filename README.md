@@ -11,7 +11,7 @@ The app accepts borrower inputs, returns probability and risk annotation, and st
 
 The web app includes an interactive ML dashboard that combines prediction, monitoring, and analysis in one place.
 
-- **Live KPI cards** for total applicants, low/high-risk mix, and headline model score.
+- **Live KPI cards**  for total applicants, low/high-risk mix, and headline model score.
 - **Model comparison panel** showing performance across Logistic Regression, XGBoost, and Balanced Random Forest (with and without optimization), including Accuracy, ROC-AUC, and Weighted Precision.
 - **Risk distribution visualization** (doughnut chart) based on current database records.
 - **Recent predictions table** (latest 5 requests) pulled from `PredictedData` so users can review recent scoring activity.

@@ -9,7 +9,7 @@ venv/
 env/
 myenv/
 
-# Django
+# Django  
 *.log
 local_settings.py
 
